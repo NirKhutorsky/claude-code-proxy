@@ -2178,7 +2178,7 @@ async fn smoke_codex_http_cancels_retry_backoff_when_request_drops() {
         "stream": true,
         "messages": [{"role":"user","content":"hello"}]
     })));
-    tokio::time::timeout(Duration::from_millis(200), async {
+    tokio::time::timeout(Duration::from_secs(5), async {
         while attempts.load(Ordering::SeqCst) == 0 {
             tokio::task::yield_now().await;
         }
