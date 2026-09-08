@@ -3,6 +3,12 @@ title: Changelog
 description: Release notes for claude-code-proxy.
 ---
 
+## v0.1.37 (2026-09-08)
+
+- OpenCode Go requests work again instead of failing with a missing session header
+  error. ([#137](https://github.com/raine/claude-code-proxy/issues/137),
+  [#138](https://github.com/raine/claude-code-proxy/pull/138))
+
 ## v0.1.36 (2026-09-06)
 
 - Codex users can select GPT-6 Astra with `gpt-6-astra` or its priority-tier
