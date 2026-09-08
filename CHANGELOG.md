@@ -3,6 +3,21 @@ title: Changelog
 description: Release notes for claude-code-proxy.
 ---
 
+## v0.1.36 (2026-09-06)
+
+- Codex users can select GPT-6 Astra with `gpt-6-astra` or its priority-tier
+  `gpt-6-astra-fast` alias.
+  ([#129](https://github.com/raine/claude-code-proxy/pull/129))
+- Codex conversation continuation stays active after tool calls, avoiding
+  unnecessary full-history uploads and reconnects when continuation is enabled.
+  ([#118](https://github.com/raine/claude-code-proxy/issues/118),
+  [#119](https://github.com/raine/claude-code-proxy/pull/119))
+- Claude Code responses include request IDs, including on errors, so transcript
+  tools can avoid double-counting usage and failed requests are easier to trace.
+  ([#104](https://github.com/raine/claude-code-proxy/issues/104),
+  [#105](https://github.com/raine/claude-code-proxy/pull/105))
+- Nix builds avoid dependency download failures caused by crates.io API rate limits.
+
 ## v0.1.35 (2026-08-19)
 
 - Grok web search works reliably with Claude Code, preserves other tools, and
