@@ -1,0 +1,86 @@
+# Owned, pinned Windows build of claude-code-proxy.
+# Manual-trigger only. Builds the exact audited commit, deps locked, native windows-msvc.
+# Emits the .exe + sha256 + a build-environment manifest. Nothing is published.
+# Trust roots accepted: GitHub Actions, GitHub-owned pinned actions, the Rust
+# distribution, the locked crates.io crates, and Microsoft's MSVC toolchain.
+name: build-owned-windows
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read            # job cannot write back to the repo
+
+jobs:
+  build:
+    runs-on: windows-2025   # explicit image, not the floating windows-latest
+    env:                    # strip anything that could steer the compile
+      RUSTFLAGS: ""
+      RUSTC_WRAPPER: ""
+      CARGO_ENCODED_RUSTFLAGS: ""
+      CARGO_BUILD_RUSTFLAGS: ""
+    steps:
+      - name: Checkout the audited commit (actions pinned by commit SHA)
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+        with:
+          ref: 88a9ae326f8ff5fc3ea222e41c511231f9bec1ba   # v0.1.37, audited
+          persist-credentials: false
+
+      - name: Assert we are on the exact audited SHA
+        shell: pwsh
+        run: |
+          $head = (git rev-parse HEAD).Trim()
+          if ($head -ne "88a9ae326f8ff5fc3ea222e41c511231f9bec1ba") {
+            Write-Error "HEAD $head != audited SHA"; exit 1
+          }
+          Write-Host "HEAD = $head (audited)"
+
+      - name: Install stable Rust via runner's rustup (no third-party action)
+        shell: pwsh
+        run: |
+          rustup toolchain install stable --profile minimal
+          rustup default stable
+          rustup target add x86_64-pc-windows-msvc
+
+      - name: Record build-environment manifest (immutable log)
+        shell: pwsh
+        run: |
+          "image: $env:ImageVersion"        | Tee-Object manifest.txt
+          (rustc -Vv)                        | Tee-Object manifest.txt -Append
+          (cargo -V)                         | Tee-Object manifest.txt -Append
+          (rustup show)                      | Tee-Object manifest.txt -Append
+          (git --version)                    | Tee-Object manifest.txt -Append
+          "source_sha: 88a9ae326f8ff5fc3ea222e41c511231f9bec1ba" | Tee-Object manifest.txt -Append
+          "workflow_sha: $env:GITHUB_SHA"    | Tee-Object manifest.txt -Append
+
+      - name: Fail if the tree is dirty before build
+        shell: pwsh
+        run: if ((git status --porcelain).Length -ne 0) { git status --porcelain; Write-Error "tree dirty pre-build"; exit 1 }
+
+      - name: Build (release, locked deps)
+        run: cargo build --release --locked --target x86_64-pc-windows-msvc
+
+      - name: Fail if the build mutated tracked files
+        shell: pwsh
+        run: if ((git status --porcelain).Length -ne 0) { git status --porcelain; Write-Error "build mutated tracked files"; exit 1 }
+
+      - name: Verify version
+        shell: pwsh
+        run: Write-Host ("version: " + (& "target/x86_64-pc-windows-msvc/release/claude-code-proxy.exe" --version))
+
+      - name: Compute and print sha256 (immutable log)
+        shell: pwsh
+        run: |
+          $h = Get-FileHash -Algorithm SHA256 "target/x86_64-pc-windows-msvc/release/claude-code-proxy.exe"
+          $h.Hash | Tee-Object sha256.txt
+          Write-Host "SHA256 = $($h.Hash)"
+
+      - name: Upload artifact (exe + hash + manifest only)
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4.6.2
+        with:
+          name: claude-code-proxy-windows-amd64
+          path: |
+            target/x86_64-pc-windows-msvc/release/claude-code-proxy.exe
+            sha256.txt
+            manifest.txt
+          if-no-files-found: error
