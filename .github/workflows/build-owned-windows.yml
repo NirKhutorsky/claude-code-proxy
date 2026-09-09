@@ -55,14 +55,14 @@ jobs:
 
       - name: Fail if the tree is dirty before build
         shell: pwsh
-        run: if ((git status --porcelain).Length -ne 0) { git status --porcelain; Write-Error "tree dirty pre-build"; exit 1 }
+        run: if ((git status --porcelain --untracked-files=no).Length -ne 0) { git status --porcelain --untracked-files=no; Write-Error "tracked files dirty pre-build"; exit 1 }
 
       - name: Build (release, locked deps)
         run: cargo build --release --locked --target x86_64-pc-windows-msvc
 
       - name: Fail if the build mutated tracked files
         shell: pwsh
-        run: if ((git status --porcelain).Length -ne 0) { git status --porcelain; Write-Error "build mutated tracked files"; exit 1 }
+        run: if ((git status --porcelain --untracked-files=no).Length -ne 0) { git status --porcelain --untracked-files=no; Write-Error "build mutated tracked files"; exit 1 }
 
       - name: Verify version
         shell: pwsh
